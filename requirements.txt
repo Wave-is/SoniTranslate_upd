@@ -11,6 +11,7 @@ edge_tts==6.1.7
 deep_translator==1.11.4
 git+https://github.com/m-bain/whisperX.git@a5dca2c
 gTTS
+google-cloud-texttospeech>=2.14.1
 gradio_client==0.10.1
 praat-parselmouth>=0.4.3
 pyworld==0.3.2

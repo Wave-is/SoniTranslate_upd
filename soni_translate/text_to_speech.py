@@ -6,6 +6,9 @@ from .language_configuration import (
     fix_code_language,
     BARK_VOICES_LIST,
     VITS_VOICES_LIST,
+    STYLETTS2_UA_VOICE_MAP,
+    VIBEVOICE_VOICE_MAP_DEFAULT,
+    GOOGLE_CLOUD_TTS_FALLBACK,
 )
 from .utils import (
     download_manager,
@@ -17,14 +20,37 @@ from .utils import (
     run_command,
     write_chunked,
 )
+from custom_tts import (
+    styletts2_available_voices,
+    styletts2_synthesize,
+    vibevoice_available_voices,
+    vibevoice_synthesize,
+    google_cloud_available_voices,
+    google_cloud_synthesize,
+    GoogleVoice,
+)
 import numpy as np
-from typing import Any, Dict
+from typing import Any, Dict, List
 from pathlib import Path
 import soundfile as sf
 import platform
 import logging
 import traceback
 from .logging_setup import logger
+
+
+STYLETTS2_VOICE_OPTIONS = dict(STYLETTS2_UA_VOICE_MAP)
+VIBEVOICE_VOICE_OPTIONS = dict(VIBEVOICE_VOICE_MAP_DEFAULT)
+GOOGLE_TTS_VOICE_OPTIONS = {
+    name: {
+        "voice": GoogleVoice(
+            name=cfg["name"],
+            language_code=cfg["language_code"],
+        ),
+        "speaking_rate": cfg.get("speaking_rate", 1.0),
+    }
+    for name, cfg in GOOGLE_CLOUD_TTS_FALLBACK.items()
+}
 
 
 class TTS_OperationError(Exception):
@@ -149,7 +175,53 @@ def edge_tts_voices_list():
     if not formatted_voices:
         logger.error("Can't get EDGE TTS - list voices")
 
+
     return formatted_voices
+
+
+def styletts2_voices_list():
+    return sorted(STYLETTS2_VOICE_OPTIONS.keys())
+
+
+def vibevoice_voices_list():
+    try:
+        voices = vibevoice_available_voices()
+    except Exception as error:
+        logger.debug(f"VibeVoice voice discovery failed: {error}")
+    else:
+        if voices:
+            updated = {
+                f"{voice} VibeVoice": {
+                    "voice_name": voice,
+                    "language": voice.split('-')[0],
+                    "cfg_scale": 1.3,
+                    "num_speakers": 1,
+                }
+                for voice in voices
+            }
+            VIBEVOICE_VOICE_OPTIONS.clear()
+            VIBEVOICE_VOICE_OPTIONS.update(updated)
+    return sorted(VIBEVOICE_VOICE_OPTIONS.keys())
+
+
+def google_cloud_tts_voices_list():
+    try:
+        voices = google_cloud_available_voices()
+    except Exception as error:
+        logger.debug(f"Google Cloud TTS voice discovery failed: {error}")
+    else:
+        if voices:
+            updated = {
+                f"{name} GoogleTTS": {
+                    "voice": voice,
+                    "speaking_rate": 1.0,
+                }
+                for name, voice in voices.items()
+            }
+            if updated:
+                GOOGLE_TTS_VOICE_OPTIONS.clear()
+                GOOGLE_TTS_VOICE_OPTIONS.update(updated)
+    return sorted(GOOGLE_TTS_VOICE_OPTIONS.keys())
 
 
 def segments_egde_tts(filtered_edge_segments, TRANSLATE_AUDIO_TO, is_gui):
@@ -883,6 +955,134 @@ def segments_vits_onnx_tts(filtered_onnx_vits_segments, TRANSLATE_AUDIO_TO):
 # =====================================
 
 
+
+
+# =====================================
+# STYLETTS2 UKRAINIAN TTS
+# =====================================
+
+def segments_styletts2_tts(filtered_segments, TRANSLATE_AUDIO_TO):
+    for segment in tqdm(filtered_segments["segments"]):
+        text = segment["text"].strip()
+        start = segment["start"]
+        tts_name = segment["tts_name"]
+        filename = f"audio/{start}.ogg"
+        logger.info(f"{text} >> {filename}")
+
+        config = STYLETTS2_VOICE_OPTIONS.get(tts_name)
+        temp_path = None
+        try:
+            if not config:
+                raise TTS_OperationError(
+                    f"Unsupported StyleTTS2 voice '{tts_name}'"
+                )
+            temp_path = styletts2_synthesize(
+                text,
+                voice_name=config["voice_name"],
+                model_name=config.get("model_name", "multi"),
+                speed=config.get("speed", 1.0),
+            )
+            data, sample_rate = sf.read(temp_path)
+            data = pad_array(data, sample_rate)
+            write_chunked(
+                file=filename,
+                samplerate=sample_rate,
+                data=data,
+                format="ogg",
+                subtype="vorbis",
+            )
+            verify_saved_file_and_size(filename)
+        except Exception as error:
+            error_handling_in_tts(error, segment, TRANSLATE_AUDIO_TO, filename)
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
+
+
+# =====================================
+# VIBEVOICE TTS
+# =====================================
+
+def segments_vibevoice_tts(filtered_segments, TRANSLATE_AUDIO_TO):
+    for segment in tqdm(filtered_segments["segments"]):
+        text = segment["text"].strip()
+        start = segment["start"]
+        tts_name = segment["tts_name"]
+        filename = f"audio/{start}.ogg"
+        logger.info(f"{text} >> {filename}")
+
+        config = VIBEVOICE_VOICE_OPTIONS.get(tts_name)
+        temp_path = None
+        try:
+            if not config:
+                raise TTS_OperationError(
+                    f"Unsupported VibeVoice voice '{tts_name}'"
+                )
+            temp_path = vibevoice_synthesize(
+                text,
+                voice_name=config["voice_name"],
+                cfg_scale=config.get("cfg_scale", 1.3),
+                num_speakers=config.get("num_speakers", 1),
+            )
+            data, sample_rate = sf.read(temp_path)
+            data = pad_array(data, sample_rate)
+            write_chunked(
+                file=filename,
+                samplerate=sample_rate,
+                data=data,
+                format="ogg",
+                subtype="vorbis",
+            )
+            verify_saved_file_and_size(filename)
+        except Exception as error:
+            error_handling_in_tts(error, segment, TRANSLATE_AUDIO_TO, filename)
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
+
+
+# =====================================
+# GOOGLE CLOUD TTS
+# =====================================
+
+def segments_google_cloud_tts(filtered_segments, TRANSLATE_AUDIO_TO):
+    for segment in tqdm(filtered_segments["segments"]):
+        text = segment["text"].strip()
+        start = segment["start"]
+        tts_name = segment["tts_name"]
+        filename = f"audio/{start}.ogg"
+        logger.info(f"{text} >> {filename}")
+
+        config = GOOGLE_TTS_VOICE_OPTIONS.get(tts_name)
+        temp_path = None
+        try:
+            if not config:
+                raise TTS_OperationError(
+                    f"Unsupported Google Cloud voice '{tts_name}'"
+                )
+            voice: GoogleVoice = config["voice"]
+            temp_path = google_cloud_synthesize(
+                text,
+                voice=voice,
+                speaking_rate=config.get("speaking_rate", 1.0),
+            )
+            data, sample_rate = sf.read(temp_path)
+            data = pad_array(data, sample_rate)
+            write_chunked(
+                file=filename,
+                samplerate=sample_rate,
+                data=data,
+                format="ogg",
+                subtype="vorbis",
+            )
+            verify_saved_file_and_size(filename)
+        except Exception as error:
+            error_handling_in_tts(error, segment, TRANSLATE_AUDIO_TO, filename)
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
+
+
 def segments_openai_tts(
     filtered_openai_tts_segments, TRANSLATE_AUDIO_TO
 ):
@@ -1022,6 +1222,9 @@ def audio_segmentation_to_voice(
     pattern_coqui = re.compile(r".+\.(wav|mp3|ogg|m4a)$")
     pattern_vits_onnx = re.compile(r".* VITS-onnx$")
     pattern_openai_tts = re.compile(r".* OpenAI-TTS$")
+    pattern_styletts2 = re.compile(r".* STYLETTS2-UA$")
+    pattern_vibevoice = re.compile(r".* VibeVoice$")
+    pattern_google_tts = re.compile(r".* GoogleTTS$")
 
     all_segments = result_diarize["segments"]
 
@@ -1035,6 +1238,15 @@ def audio_segmentation_to_voice(
     speakers_openai_tts = find_spkr(
         pattern_openai_tts, speaker_to_voice, all_segments
     )
+    speakers_styletts2 = find_spkr(
+        pattern_styletts2, speaker_to_voice, all_segments
+    )
+    speakers_vibevoice = find_spkr(
+        pattern_vibevoice, speaker_to_voice, all_segments
+    )
+    speakers_google_tts = find_spkr(
+        pattern_google_tts, speaker_to_voice, all_segments
+    )
 
     # Filter method in segments
     filtered_edge = filter_by_speaker(speakers_edge, all_segments)
@@ -1043,6 +1255,9 @@ def audio_segmentation_to_voice(
     filtered_coqui = filter_by_speaker(speakers_coqui, all_segments)
     filtered_vits_onnx = filter_by_speaker(speakers_vits_onnx, all_segments)
     filtered_openai_tts = filter_by_speaker(speakers_openai_tts, all_segments)
+    filtered_styletts2 = filter_by_speaker(speakers_styletts2, all_segments)
+    filtered_vibevoice = filter_by_speaker(speakers_vibevoice, all_segments)
+    filtered_google_tts = filter_by_speaker(speakers_google_tts, all_segments)
 
     # Infer
     if filtered_edge["segments"]:
@@ -1069,9 +1284,19 @@ def audio_segmentation_to_voice(
     if filtered_vits_onnx["segments"]:
         logger.info(f"PIPER TTS: {speakers_vits_onnx}")
         segments_vits_onnx_tts(filtered_vits_onnx, TRANSLATE_AUDIO_TO)  # wav
+
     if filtered_openai_tts["segments"]:
         logger.info(f"OpenAI TTS: {speakers_openai_tts}")
         segments_openai_tts(filtered_openai_tts, TRANSLATE_AUDIO_TO)  # wav
+    if filtered_styletts2["segments"]:
+        logger.info(f"StyleTTS2: {speakers_styletts2}")
+        segments_styletts2_tts(filtered_styletts2, TRANSLATE_AUDIO_TO)
+    if filtered_vibevoice["segments"]:
+        logger.info(f"VibeVoice TTS: {speakers_vibevoice}")
+        segments_vibevoice_tts(filtered_vibevoice, TRANSLATE_AUDIO_TO)
+    if filtered_google_tts["segments"]:
+        logger.info(f"Google Cloud TTS: {speakers_google_tts}")
+        segments_google_cloud_tts(filtered_google_tts, TRANSLATE_AUDIO_TO)
 
     [result.pop("tts_name", None) for result in result_diarize["segments"]]
     return [
@@ -1080,7 +1305,10 @@ def audio_segmentation_to_voice(
         speakers_vits,
         speakers_coqui,
         speakers_vits_onnx,
-        speakers_openai_tts
+        speakers_openai_tts,
+        speakers_styletts2,
+        speakers_vibevoice,
+        speakers_google_tts
     ]
 
 
@@ -1093,14 +1321,7 @@ def accelerate_segments(
 ):
     logger.info("Apply acceleration")
 
-    (
-        speakers_edge,
-        speakers_bark,
-        speakers_vits,
-        speakers_coqui,
-        speakers_vits_onnx,
-        speakers_openai_tts
-    ) = valid_speakers
+    speakers_edge = valid_speakers[0] if valid_speakers else []
 
     create_directories(f"{folder_output}/audio/")
     remove_directory_contents(f"{folder_output}/audio/")

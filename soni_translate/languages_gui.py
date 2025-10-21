@@ -52,6 +52,9 @@ language_data = {
         - BARK → format `en_speaker_0-Male BARK` → Good quality but slow, and it is prone to hallucinations.
         - OpenAI TTS → format `>alloy OpenAI-TTS` → Multilingual but it needs an OpenAI API key.
         - Coqui XTTS → format `_XTTS_/AUTOMATIC.wav` → Only available for Chinese (Simplified), English, French, German, Italian, Portuguese, Polish, Turkish, Russian, Dutch, Czech, Arabic, Spanish, Hungarian, Korean and Japanese.
+        - StyleTTS2-UA → format `Інна Гелевера STYLETTS2-UA` → Works with the separate StyleTTS2 service (configurable through `STYLETTS2_URL`).
+        - VibeVoice → format `en-Maya_woman VibeVoice` → Uses the external VibeVoice server and automatically lists available/custom voices.
+        - Google Cloud TTS → format `en-US-Standard-A GoogleTTS` → Lists every voice available for the configured Google Cloud project.
 
         ---
 

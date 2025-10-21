@@ -13,6 +13,9 @@ from soni_translate.text_to_speech import (
     edge_tts_voices_list,
     coqui_xtts_voices_list,
     piper_tts_voices_list,
+    styletts2_voices_list,
+    vibevoice_voices_list,
+    google_cloud_tts_voices_list,
     create_wav_file_vc,
     accelerate_segments,
 )
@@ -120,6 +123,9 @@ class TTS_Info:
         self.list_bark = list(BARK_VOICES_LIST.keys())
         self.list_vits = list(VITS_VOICES_LIST.keys())
         self.list_openai_tts = OPENAI_TTS_MODELS
+        self.list_styletts2 = styletts2_voices_list()
+        self.list_vibevoice = vibevoice_voices_list()
+        self.list_google_tts = google_cloud_tts_voices_list()
         self.piper_enabled = piper_enabled
         self.list_vits_onnx = (
             piper_tts_voices_list() if self.piper_enabled else []
@@ -130,13 +136,17 @@ class TTS_Info:
         self.list_coqui_xtts = (
             coqui_xtts_voices_list() if self.xtts_enabled else []
         )
-        list_tts = self.list_coqui_xtts + sorted(
+        base_list = (
             self.list_edge
             + self.list_bark
             + self.list_vits
             + self.list_openai_tts
             + self.list_vits_onnx
+            + self.list_styletts2
+            + self.list_vibevoice
+            + self.list_google_tts
         )
+        list_tts = self.list_coqui_xtts + sorted(base_list)
         return list_tts
 
 

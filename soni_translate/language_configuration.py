@@ -482,6 +482,108 @@ VITS_VOICES_LIST = {
     "tl-facebook-mms VITS": "facebook/mms-tts-tgl",
 }
 
+STYLETTS2_UA_VOICE_MAP = {
+    f"{voice} STYLETTS2-UA": {
+        "voice_name": voice,
+        "language": "uk",
+        "model_name": "multi",
+        "speed": 1.0,
+    }
+    for voice in [
+        "Інна Гелевера",
+        "Анастасія Павленко",
+        "Артем Окороков",
+        "Вʼячеслав Дудко",
+        "Вероніка Дорош",
+        "Влада Муравець",
+        "Вікторія Левченко",
+        "Гаська Шиян",
+        "Денис Денисенко",
+        "Катерина Потапенко",
+        "Кирило Татарченко",
+        "Людмила Чиркова",
+        "Марина Панас",
+        "Марися Нікітюк",
+        "Марта Мольфар",
+        "Марічка Штирбулова",
+        "Матвій Ніколаєв",
+        "Михайло Тишин",
+        "Олександр Ролдугін",
+        "Олена Шверк",
+        "Павло Буковський",
+        "Петро Філяк",
+        "Поліна Еккерт",
+        "Поліна Еккерт(хлопчик)",
+        "Роман Куліш",
+        "Слава Красовська",
+        "Тарас Василюк",
+        "Тетяна Гончарова",
+        "Тетяна Лукинюк",
+        "Юрій Вихованець",
+        "Юрій Кудрявець",
+    ]
+}
+
+VIBEVOICE_VOICE_MAP_DEFAULT = {
+    f"{voice} VibeVoice": {
+        "voice_name": voice,
+        "language": voice.split('-')[0],
+        "cfg_scale": 1.3,
+        "num_speakers": 1,
+    }
+    for voice in [
+        "zh-Xinran_woman",
+        "en-Alice_woman_bgm",
+        "zh-Anchen_man_bgm",
+        "in-Samuel_man",
+        "en-Alice_woman",
+        "en-Frank_man",
+        "zh-Bowen_man",
+        "en-Maya_woman",
+        "en-Carter_man",
+        "en-Yasser_man",
+    ]
+}
+
+GOOGLE_CLOUD_TTS_FALLBACK = {
+    "en-US-Standard-A GoogleTTS": {
+        "name": "en-US-Standard-A",
+        "language_code": "en-US",
+        "speaking_rate": 1.0,
+    },
+    "uk-UA-Standard-A GoogleTTS": {
+        "name": "uk-UA-Standard-A",
+        "language_code": "uk-UA",
+        "speaking_rate": 1.0,
+    },
+    "es-ES-Standard-A GoogleTTS": {
+        "name": "es-ES-Standard-A",
+        "language_code": "es-ES",
+        "speaking_rate": 1.0,
+    },
+    "fr-FR-Standard-A GoogleTTS": {
+        "name": "fr-FR-Standard-A",
+        "language_code": "fr-FR",
+        "speaking_rate": 1.0,
+    },
+    "de-DE-Standard-A GoogleTTS": {
+        "name": "de-DE-Standard-A",
+        "language_code": "de-DE",
+        "speaking_rate": 1.0,
+    },
+    "pl-PL-Standard-A GoogleTTS": {
+        "name": "pl-PL-Standard-A",
+        "language_code": "pl-PL",
+        "speaking_rate": 1.0,
+    },
+    "ru-RU-Standard-A GoogleTTS": {
+        "name": "ru-RU-Standard-A",
+        "language_code": "ru-RU",
+        "speaking_rate": 1.0,
+    },
+}
+
+
 OPENAI_TTS_CODES = [
     "af", "ar", "hy", "az", "be", "bs", "bg", "ca", "zh", "hr", "cs", "da",
     "nl", "en", "et", "fi", "fr", "gl", "de", "el", "he", "hi", "hu", "is",

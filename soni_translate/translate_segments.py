@@ -1,5 +1,6 @@
 from tqdm import tqdm
 from deep_translator import GoogleTranslator
+from custom_translators import deepl_translate, deeplx_translate
 from itertools import chain
 import copy
 from .language_configuration import fix_code_language, INVERTED_LANGUAGES
@@ -11,6 +12,8 @@ import time
 TRANSLATION_PROCESS_OPTIONS = [
     "google_translator_batch",
     "google_translator",
+    "deepl",
+    "deeplx",
     "gpt-3.5-turbo-0125_batch",
     "gpt-3.5-turbo-0125",
     "gpt-4-turbo-preview_batch",
@@ -19,6 +22,8 @@ TRANSLATION_PROCESS_OPTIONS = [
 ]
 DOCS_TRANSLATION_PROCESS_OPTIONS = [
     "google_translator",
+    "deepl",
+    "deeplx",
     "gpt-3.5-turbo-0125",
     "gpt-4-turbo-preview",
     "disable_translation",
@@ -61,7 +66,29 @@ def translate_iterative(segments, target, source=None):
         translated_line = translator.translate(text.strip())
         segments_[line]["text"] = translated_line
 
+
     return segments_
+
+
+def translate_with_custom_service(segments, target, translator_callable, source=None):
+    segments_copy = copy.deepcopy(segments)
+    normalized_target = fix_code_language(target)
+    normalized_source = fix_code_language(source)
+
+    progress_bar = tqdm(range(len(segments_copy)), desc="Translating")
+    try:
+        for idx in progress_bar:
+            text = segments_copy[idx]["text"].strip()
+            translated_line = translator_callable(
+                text,
+                normalized_source,
+                normalized_target,
+            )
+            segments_copy[idx]["text"] = translated_line.strip()
+    finally:
+        progress_bar.close()
+
+    return segments_copy
 
 
 def verify_translate(
@@ -443,6 +470,7 @@ def translate_text(
             )
         case model if model in ["gpt-3.5-turbo-0125", "gpt-4-turbo-preview"]:
             return gpt_sequential(segments, model, target, source)
+
         case model if model in ["gpt-3.5-turbo-0125_batch", "gpt-4-turbo-preview_batch",]:
             return gpt_batch(
                 segments,
@@ -450,6 +478,20 @@ def translate_text(
                 target,
                 token_batch_limit,
                 source
+            )
+        case "deepl":
+            return translate_with_custom_service(
+                segments,
+                target,
+                deepl_translate,
+                source,
+            )
+        case "deeplx":
+            return translate_with_custom_service(
+                segments,
+                target,
+                deeplx_translate,
+                source,
             )
         case "disable_translation":
             return segments

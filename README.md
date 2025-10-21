@@ -11,6 +11,13 @@ SonyTranslate is a powerful and user-friendly web application that allows you to
 | 🎉 Repository | [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-black?style=flat-square&logo=github)](https://github.com/R3gm/SoniTranslate/) |
 | 🚀 Online DEMO | [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/r3gm/SoniTranslate_translate_audio_of_a_video_content) |
 
+### What's new in this fork
+
+* ✅ Added built-in integration with a StyleTTS2 Ukrainian service (all listed voices and speed controls available in the GUI).
+* ✅ Added VibeVoice multi-speaker synthesis, including support for custom voices exposed by the remote instance.
+* ✅ Added Google Cloud Text-to-Speech support with automatic voice discovery when credentials are configured.
+* ✅ Added DeepL and DeepLX translation providers alongside the existing Google/OpenAI options.
+
 ## SonyTranslate's web UI, which features a browser interface built on the Gradio library.
 ![image](https://github.com/R3gm/SoniTranslate/assets/114810545/0d71fbf4-e9f0-4f8f-944e-8f3f1ea6a019)
 
