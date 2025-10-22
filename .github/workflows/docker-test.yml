@@ -34,14 +34,16 @@ jobs:
 
       # 4️⃣ Сборка Docker-образа
       - name: Build Docker image
+        id: build
         run: |
           echo "🚧 Building Docker image..."
           docker build \
             --cache-from=type=local,src=/tmp/.buildx-cache \
             -t sonitranslate-test .
 
-      # 5️⃣ Запуск контейнера
+      # 5️⃣ Запуск контейнера (только если сборка успешна)
       - name: Run container
+        if: success() && steps.build.outcome == 'success'
         run: |
           echo "🚀 Running container..."
           docker run -d -p 7860:7860 --name sonitranslate sonitranslate-test
@@ -50,6 +52,7 @@ jobs:
 
       # 6️⃣ Проверка доступности API
       - name: Check API health
+        if: success() && steps.build.outcome == 'success'
         run: |
           echo "🧪 Checking API..."
           curl -f http://localhost:7860/health || \
@@ -57,7 +60,7 @@ jobs:
 
       # 7️⃣ Показ логов при ошибке
       - name: Show container logs on failure
-        if: failure()
+        if: failure() && steps.build.outcome == 'success'
         run: docker logs sonitranslate || true
 
       # 8️⃣ Отладка через SSH (tmate)
