@@ -9,16 +9,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       # 1️⃣ Клонируем репозиторий
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Настраиваем Buildx (улучшенная версия Docker builder)
+      # 2️⃣ Настраиваем Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:buildx-stable-1
+            network=host
 
-      # 3️⃣ Кэшируем слои Docker
+      # 3️⃣ Кэш Docker-слоёв
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
@@ -33,7 +38,6 @@ jobs:
           echo "🚧 Building Docker image..."
           docker build \
             --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
             -t sonitranslate-test .
 
       # 5️⃣ Запуск контейнера
@@ -51,12 +55,12 @@ jobs:
           curl -f http://localhost:7860/health || \
           (echo "❌ API not responding"; docker logs sonitranslate; exit 1)
 
-      # 7️⃣ Вывод логов при ошибке
+      # 7️⃣ Показ логов при ошибке
       - name: Show container logs on failure
         if: failure()
         run: docker logs sonitranslate || true
 
-      # 8️⃣ Отладка (опционально)
+      # 8️⃣ Отладка через SSH (tmate)
       - name: Debug via SSH (optional)
         if: failure()
         uses: mxschmitt/action-tmate@v3
@@ -67,10 +71,3 @@ jobs:
         run: |
           echo "🧹 Cleaning up..."
           docker rm -f sonitranslate || true
-
-      # 🔟 Обновление кэша (перемещение нового кэша в старый)
-      - name: Move Docker cache
-        if: always()
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
