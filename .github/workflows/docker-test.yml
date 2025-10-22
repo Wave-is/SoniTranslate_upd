@@ -1,0 +1,38 @@
+name: Docker Build & Test (SoniTranslate)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        run: docker build -t sonitranslate-test .
+
+      - name: Run container
+        run: |
+          docker run -d -p 7860:7860 --name sonitranslate sonitranslate-test
+          sleep 60
+          docker ps
+
+      - name: Check API health
+        run: |
+          curl -f http://localhost:7860/health || \
+          (echo "Container did not respond"; docker logs sonitranslate; exit 1)
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-logs
+          path: /home/runner/.docker
