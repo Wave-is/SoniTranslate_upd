@@ -4,35 +4,73 @@ on:
   push:
     branches: [ main, master ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      # 1️⃣ Клонируем репозиторий
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Настраиваем Buildx (улучшенная версия Docker builder)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image
-        run: docker build -t sonitranslate-test .
+      # 3️⃣ Кэшируем слои Docker
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
+      # 4️⃣ Сборка Docker-образа
+      - name: Build Docker image
+        run: |
+          echo "🚧 Building Docker image..."
+          docker build \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
+            -t sonitranslate-test .
+
+      # 5️⃣ Запуск контейнера
       - name: Run container
         run: |
+          echo "🚀 Running container..."
           docker run -d -p 7860:7860 --name sonitranslate sonitranslate-test
           sleep 60
           docker ps
 
+      # 6️⃣ Проверка доступности API
       - name: Check API health
         run: |
+          echo "🧪 Checking API..."
           curl -f http://localhost:7860/health || \
-          (echo "Container did not respond"; docker logs sonitranslate; exit 1)
+          (echo "❌ API not responding"; docker logs sonitranslate; exit 1)
 
-      - name: Upload logs on failure
+      # 7️⃣ Вывод логов при ошибке
+      - name: Show container logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-logs
-          path: /home/runner/.docker
+        run: docker logs sonitranslate || true
+
+      # 8️⃣ Отладка (опционально)
+      - name: Debug via SSH (optional)
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
+
+      # 9️⃣ Очистка контейнера
+      - name: Clean up
+        if: always()
+        run: |
+          echo "🧹 Cleaning up..."
+          docker rm -f sonitranslate || true
+
+      # 🔟 Обновление кэша (перемещение нового кэша в старый)
+      - name: Move Docker cache
+        if: always()
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
