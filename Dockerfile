@@ -39,7 +39,7 @@ RUN if [ "$INSTALL_PIPER_TTS" = "true" ]; then pip install -q piper-tts==1.2.0; 
 ARG INSTALL_COQUI_XTTS=true
 RUN if [ "$INSTALL_COQUI_XTTS" = "true" ]; then pip install -q -r requirements_xtts.txt && pip install -q TTS==0.21.1 --no-deps; fi
 # Устанавливаем переменные окружения
-ARG DEFAULT_HF_TOKEN=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
+ARG DEFAULT_HF_TOKEN=hf_uMzDePydyttvJrqIsrwgwsdfsdfsRLAJWjOET
 ENV YOUR_HF_TOKEN=${DEFAULT_HF_TOKEN}
 # Создаем директории
 RUN mkdir -p /app/downloads /app/logs /app/weights /app/clean_song_output /app/_XTTS_ /app/audio2/audio /app/audio /app/outputs
